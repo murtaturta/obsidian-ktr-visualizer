@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Writing Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f0e; --surface: #161917; --border: #1e2320;
+    --text: #c8d4c0; --text-dim: #5a6657; --text-muted: #2e3a2b;
+    --c0: #111a0f; --c1: #1a3018; --c2: #1e5c22; --c3: #28842e; --c4: #39b53d; --c5: #52e057;
+    --accent: #52e057; --gold: #c9a84c;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:var(--bg); color:var(--text); font-family:'DM Mono',monospace;
+    min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:40px 20px;
+  }
+  body::before {
+    content:''; position:fixed; inset:0; pointer-events:none;
+    background: radial-gradient(ellipse 60% 40% at 20% 80%,rgba(57,181,61,.04) 0%,transparent 70%),
+                radial-gradient(ellipse 40% 60% at 80% 20%,rgba(82,224,87,.03) 0%,transparent 70%);
+  }
+  .container { width:100%; max-width:900px; }
+
+  /* ── Upload screen ── */
+  .upload-screen {
+    min-height:80vh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:24px;
+  }
+  .upload-screen h1 { font-family:'Fraunces',serif; font-size:clamp(28px,5vw,48px); font-weight:300; color:#e8f0e0; letter-spacing:-.02em; }
+  .upload-screen h1 em { font-style:italic; color:var(--accent); }
+  .upload-screen p { font-size:11px; color:var(--text-dim); letter-spacing:.06em; }
+  .upload-btn {
+    display:inline-flex; align-items:center; gap:10px;
+    border:1px solid var(--border); background:var(--surface); color:var(--text-dim);
+    font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.15em; text-transform:uppercase;
+    padding:14px 28px; cursor:pointer; transition:border-color .2s,color .2s;
+  }
+  .upload-btn:hover { border-color:var(--accent); color:var(--accent); }
+  #file-input { display:none; }
+
+  /* ── Header ── */
+  header { margin-bottom:40px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; }
+  .header-left .eyebrow { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; }
+  .header-left h1 { font-family:'Fraunces',serif; font-size:clamp(28px,5vw,44px); font-weight:300; color:#e8f0e0; letter-spacing:-.02em; line-height:1; }
+  .header-left h1 em { font-style:italic; color:var(--accent); }
+  .reload-btn {
+    background:none; border:1px solid var(--border); color:var(--text-muted);
+    font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    padding:7px 14px; cursor:pointer; transition:border-color .2s,color .2s;
+  }
+  .reload-btn:hover { border-color:var(--text-dim); color:var(--text-dim); }
+
+  /* ── Stat cards ── */
+  .stats-row { display:flex; gap:2px; margin-bottom:32px; border:1px solid var(--border); }
+  .stat { flex:1; padding:18px 20px; border-right:1px solid var(--border); position:relative; overflow:hidden; }
+  .stat:last-child { border-right:none; }
+  .stat::after { content:''; position:absolute; bottom:0; left:0; height:1px; background:var(--accent); width:0; transition:width 1.2s cubic-bezier(.16,1,.3,1); }
+  .stat.animate::after { width:100%; }
+  .stat-label { font-size:9px; letter-spacing:.15em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+  .stat-value { font-family:'Fraunces',serif; font-size:24px; font-weight:700; color:var(--accent); line-height:1; }
+  .stat-sub { font-size:10px; color:var(--text-muted); margin-top:4px; }
+
+  /* ── Heatmap ── */
+  .heatmap-wrap { background:var(--surface); border:1px solid var(--border); padding:24px 24px 20px; margin-bottom:2px; }
+  .heatmap-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:8px; }
+  .heatmap-title { font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--text-dim); }
+  .heatmap-controls { display:flex; align-items:center; gap:10px; }
+  .range-label { font-size:10px; color:var(--text-muted); }
+  .toggle-btn {
+    display:flex; align-items:center; gap:6px; background:none;
+    border:1px solid var(--border); color:var(--text-dim);
+    font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    padding:5px 12px; cursor:pointer; transition:border-color .2s,color .2s,background .2s;
+  }
+  .toggle-btn:hover { border-color:var(--gold); color:var(--gold); }
+  .toggle-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(201,168,76,.07); }
+  .toggle-btn .swatch { width:9px; height:9px; border-radius:2px; background:var(--gold); flex-shrink:0; }
+
+  .month-labels { display:grid; gap:3px; margin-bottom:5px; }
+  .month-label { font-size:9px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; }
+  .grid-rows { display:flex; flex-direction:column; gap:3px; }
+  .day-row { display:grid; gap:3px; align-items:center; }
+  .day-label { font-size:9px; color:var(--text-dim); letter-spacing:.05em; text-transform:uppercase; padding-right:6px; text-align:right; }
+
+  .cell { aspect-ratio:1; border-radius:2px; cursor:pointer; transition:transform .1s,filter .1s; }
+  .cell:hover { transform:scale(1.4); z-index:10; filter:brightness(1.3); }
+  .cell[data-level="0"] { background:var(--c0); }
+  .cell[data-level="1"] { background:var(--c1); }
+  .cell[data-level="2"] { background:var(--c2); }
+  .cell[data-level="3"] { background:var(--c3); }
+  .cell[data-level="4"] { background:var(--c4); }
+  .cell[data-level="5"] { background:var(--c5); }
+  .cell.top5 { background:var(--gold) !important; box-shadow:0 0 5px rgba(201,168,76,.4); }
+  .cell.future { background:var(--c0); opacity:.35; cursor:default; }
+  .cell.future:hover { transform:none; filter:none; }
+
+  /* Slider wrap */
+  .slider-wrap { background:var(--surface); border:1px solid var(--border); border-top:none; padding:14px 24px 16px; margin-bottom:32px; }
+  .slider-row { display:flex; align-items:center; gap:14px; }
+  .slider-edge { font-size:9px; color:var(--text-muted); letter-spacing:.05em; white-space:nowrap; }
+  input[type=range] {
+    flex:1; -webkit-appearance:none; appearance:none; height:2px;
+    background:var(--border); border-radius:2px; outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance:none; width:12px; height:12px; border-radius:50%;
+    background:var(--accent); cursor:pointer; transition:transform .1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.3); }
+  input[type=range]::-moz-range-thumb {
+    width:12px; height:12px; border-radius:50%; border:none;
+    background:var(--accent); cursor:pointer;
+  }
+
+  /* Legend */
+  .legend { display:flex; align-items:center; gap:6px; margin-top:16px; justify-content:flex-end; flex-wrap:wrap; }
+  .legend-label { font-size:9px; color:var(--text-muted); letter-spacing:.08em; text-transform:uppercase; }
+  .legend-cell { width:11px; height:11px; border-radius:2px; flex-shrink:0; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position:fixed; background:#1a2018; border:1px solid var(--border);
+    padding:10px 14px; font-size:11px; pointer-events:none; opacity:0;
+    transition:opacity .15s; z-index:100; white-space:nowrap;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+  }
+  .tooltip.show { opacity:1; }
+  .tip-date { color:var(--text-dim); margin-bottom:4px; font-size:10px; }
+  .tip-words { color:var(--accent); font-weight:500; }
+  .tip-deleted { font-size:10px; color:#c06030; margin-top:2px; }
+  .tip-goal { font-size:9px; margin-top:3px; }
+  .goal-met { color:var(--accent); }
+  .goal-miss { color:#a06040; }
+
+  /* ── Insights ── */
+  .insights { display:grid; grid-template-columns:1fr 1fr; gap:2px; margin-bottom:24px; }
+  .insight { background:var(--surface); border:1px solid var(--border); padding:14px 20px; display:flex; align-items:baseline; gap:12px; }
+  .insight-icon { font-size:16px; }
+  .insight-title { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+  .insight-val { font-family:'Fraunces',serif; font-size:17px; color:#e8f0e0; font-weight:300; }
+
+  /* ── Weekly panel ── */
+  .week-panel { background:var(--surface); border:1px solid var(--border); padding:24px 24px 20px; }
+  .week-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:8px; }
+  .week-body { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+
+  .bars-title, .files-title { font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-dim); margin-bottom:14px; }
+  .bar-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .bar-day { font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; width:26px; flex-shrink:0; text-align:right; }
+  .bar-track { flex:1; height:13px; background:var(--c0); border-radius:2px; overflow:hidden; position:relative; }
+  .bar-fill { height:100%; border-radius:2px; background:var(--c3); transition:width .7s cubic-bezier(.16,1,.3,1); width:0; }
+  .bar-fill.goal-day { background:var(--c5); }
+  .bar-goal-line { position:absolute; top:0; bottom:0; width:1px; background:rgba(82,224,87,.2); }
+  .bar-val { font-size:10px; color:var(--text-dim); width:42px; flex-shrink:0; text-align:right; }
+  .bar-val.goal-day { color:var(--accent); }
+
+  .file-day-group { margin-bottom:10px; }
+  .file-day-label { font-size:9px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+  .file-chip-row { display:flex; flex-wrap:wrap; gap:3px; }
+  .file-chip {
+    font-size:9px; background:var(--c1); color:var(--text); padding:3px 7px;
+    border-radius:2px; white-space:nowrap; max-width:200px; overflow:hidden;
+    text-overflow:ellipsis; cursor:default; transition:background .15s;
+  }
+  .file-chip:hover { background:var(--c2); }
+  .no-files { font-size:11px; color:var(--text-muted); margin-top:6px; }
+
+  .week-total-row { display:flex; justify-content:space-between; align-items:baseline; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); font-size:10px; color:var(--text-dim); }
+  .week-total-val { font-family:'Fraunces',serif; font-size:20px; color:var(--accent); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Upload screen -->
+  <div class="upload-screen" id="upload-screen">
+    <div>
+      <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px">Writing Stats</div>
+      <h1>Drop your <em>data.json</em></h1>
+      <p style="margin-top:12px">Export from the Obsidian Word Count plugin and load it here.</p>
+    </div>
+    <label class="upload-btn" for="file-input">
+      <span>&#8679;</span> Load data.json
+    </label>
+    <input type="file" id="file-input" accept=".json">
+    <p id="upload-error" style="color:#c05040;font-size:10px;display:none"></p>
+  </div>
+
+  <!-- Main app (hidden until data loaded) -->
+  <div id="app" style="display:none">
+    <header>
+      <div class="header-left">
+        <div class="eyebrow">Writing Activity</div>
+        <h1>Your words, <em>visualized.</em></h1>
+      </div>
+      <button class="reload-btn" onclick="resetApp()">&#8635; Load new file</button>
+    </header>
+
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="heatmap-wrap">
+      <div class="heatmap-header">
+        <span class="heatmap-title">Daily Output</span>
+        <div class="heatmap-controls">
+          <span class="range-label" id="heatmap-range"></span>
+          <button class="toggle-btn" id="top5-btn" onclick="toggleTop5()">
+            <span class="swatch"></span> Top 5 days
+          </button>
+        </div>
+      </div>
+      <div class="month-labels" id="month-labels"></div>
+      <div class="grid-rows" id="grid-rows"></div>
+      <div class="legend">
+        <span class="legend-label">None</span>
+        <div class="legend-cell" style="background:var(--c0);border:1px solid #2a3a28"></div>
+        <div class="legend-cell" style="background:var(--c1)"></div>
+        <div class="legend-cell" style="background:var(--c2)"></div>
+        <div class="legend-cell" style="background:var(--c3)"></div>
+        <div class="legend-cell" style="background:var(--c4)"></div>
+        <div class="legend-cell" style="background:var(--c5)"></div>
+        <span class="legend-label">1200+</span>
+        <span class="legend-label" style="margin-left:10px;color:var(--text-dim)">Goal: <span id="legend-goal">300</span> words/day</span>
+      </div>
+    </div>
+
+    <!-- Slider -->
+    <div class="slider-wrap">
+      <div class="slider-row">
+        <span class="slider-edge" id="slider-left"></span>
+        <input type="range" id="heatmap-slider" min="0" step="1" value="0">
+        <span class="slider-edge">Now</span>
+      </div>
+    </div>
+
+    <div class="insights" id="insights"></div>
+
+    <!-- Weekly panel -->
+    <div class="week-panel">
+      <div class="week-header">
+        <span class="heatmap-title" id="week-title">This Week</span>
+        <span class="range-label" id="week-range"></span>
+      </div>
+      <div class="slider-row" style="margin-bottom:20px">
+        <span class="slider-edge" id="week-slider-left"></span>
+        <input type="range" id="week-slider" min="0" step="1" value="0">
+        <span class="slider-edge">Now</span>
+      </div>
+      <div class="week-body">
+        <div id="week-bars"></div>
+        <div id="week-files"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Tooltips -->
+<div class="tooltip" id="cell-tooltip">
+  <div class="tip-date" id="tip-date"></div>
+  <div class="tip-words" id="tip-words"></div>
+  <div class="tip-deleted" id="tip-deleted"></div>
+  <div class="tip-goal" id="tip-goal"></div>
+</div>
+<div class="tooltip" id="file-tooltip">
+  <div class="tip-date" id="ftip-name"></div>
+  <div class="tip-words" id="ftip-net"></div>
+  <div class="tip-deleted" id="ftip-detail"></div>
+</div>
+
+<script>
+// ── Utilities ────────────────────────────────────────────────────────────────
+function localDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function mondayOf(d) {
+  const r = new Date(d);
+  const dow = r.getDay(); // 0=Sun
+  const diff = (dow === 0) ? -6 : 1 - dow;
+  r.setDate(r.getDate() + diff);
+  return r;
+}
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAY_NAMES   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let DATA = null; // parsed & processed
+let top5Active = false;
+let currentWeekIdx = 0;
+let sliderOffset = 0; // weeks from the "anchor" (rightmost = 0)
+
+const WINDOW_WEEKS = 30;
+const FUTURE_PAD   = 2; // future weeks always shown on right
+
+// ── File loading ─────────────────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const json = JSON.parse(ev.target.result);
+      processData(json);
+    } catch(err) {
+      showError('Could not parse file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+function showError(msg) {
+  const el = document.getElementById('upload-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function resetApp() {
+  DATA = null; top5Active = false;
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  document.getElementById('upload-error').style.display = 'none';
+}
+
+// ── Data processing ──────────────────────────────────────────────────────────
+function processData(json) {
+  const da = json.stats?.dailyActivity || [];
+  const goal = parseInt(json.settings?.dailyWritingGoal || 300);
+
+  // Per-date aggregates
+  const netByDate = {};
+  const delByDate = {};
+  const filesByDate = {};
+  const hourWords = {};
+
+  for (const entry of da) {
+    const date = entry.date;
+    const changes = entry.changes || [];
+    if (!changes.length) continue;
+
+    const net     = changes.reduce((s,c) => s + c.w, 0);
+    const added   = changes.filter(c => c.w > 0).reduce((s,c) => s + c.w, 0);
+    const deleted = changes.filter(c => c.w < 0).reduce((s,c) => s + Math.abs(c.w), 0);
+
+    netByDate[date] = (netByDate[date] || 0) + net;
+    delByDate[date] = (delByDate[date] || 0) + deleted;
+
+    // Hour aggregation
+    for (const c of changes) {
+      if (c.w > 0 && c.timeKey) {
+        const hour = parseInt(c.timeKey.split(':')[0]);
+        hourWords[hour] = (hourWords[hour] || 0) + c.w;
+      }
+    }
+
+    if (net !== 0 || added !== 0 || deleted !== 0) {
+      if (!filesByDate[date]) filesByDate[date] = {};
+      const fname = entry.filePath.split('/').pop().replace(/\.md$/,'');
+      if (!filesByDate[date][fname]) filesByDate[date][fname] = {net:0,added:0,deleted:0};
+      filesByDate[date][fname].net     += net;
+      filesByDate[date][fname].added   += added;
+      filesByDate[date][fname].deleted += deleted;
+    }
+  }
+
+  // Only keep dates with positive net
+  const activeDates = Object.fromEntries(
+    Object.entries(netByDate).filter(([,v]) => v > 0)
+  );
+
+  // Date range
+  const allDates = Object.keys(activeDates).sort();
+  if (!allDates.length) { showError('No writing activity found in this file.'); return; }
+
+  const firstDate  = new Date(allDates[0] + 'T12:00:00');
+  const today      = new Date();
+  today.setHours(12,0,0,0);
+
+  // Build all weeks (Mon-anchored) from first Monday through current week + FUTURE_PAD
+  const firstMonday  = mondayOf(firstDate);
+  const currentMonday = mondayOf(today);
+  const lastMonday   = addDays(currentMonday, FUTURE_PAD * 7);
+
+  const allWeeks = [];
+  let wMon = new Date(firstMonday);
+  while (wMon <= lastMonday) {
+    allWeeks.push(new Date(wMon));
+    wMon = addDays(wMon, 7);
+  }
+
+  // Build per-week data
+  const weeks = allWeeks.map(mon => {
+    const days = [];
+    for (let d = 0; d < 7; d++) {
+      const date = addDays(mon, d);
+      const ds   = localDateStr(date);
+      const net  = activeDates[ds] || 0;
+      const del  = delByDate[ds]   || 0;
+      days.push({ date, ds, net, deleted: del, files: filesByDate[ds] || {} });
+    }
+    const label = `${MONTH_NAMES[mon.getMonth()]} ${mon.getDate()} – ${MONTH_NAMES[addDays(mon,6).getMonth()]} ${addDays(mon,6).getDate()}, ${addDays(mon,6).getFullYear()}`;
+    return { mon, days, label };
+  });
+
+  // Top 5 dates
+  const top5 = new Set(
+    Object.entries(activeDates).sort((a,b) => b[1]-a[1]).slice(0,5).map(([d]) => d)
+  );
+
+  // Sorted top5 for rank lookup
+  const top5ranked = Object.entries(activeDates).sort((a,b) => b[1]-a[1]).slice(0,5).map(([d]) => d);
+
+  const totalWords  = Object.values(activeDates).reduce((s,v) => s+v, 0);
+  const activeDays  = Object.keys(activeDates).length;
+  const goalDays    = Object.values(activeDates).filter(v => v >= goal).length;
+  const bestEntry   = Object.entries(activeDates).sort((a,b) => b[1]-a[1])[0];
+  const bestDate    = new Date(bestEntry[0] + 'T12:00:00');
+  const bestWords   = bestEntry[1];
+  const avgWords    = activeDays ? Math.round(totalWords / activeDays) : 0;
+
+  // Peak 4-hour contiguous window
+  let peakStart = 0, peakSum = 0;
+  for (let h = 0; h < 24; h++) {
+    const s = [0,1,2,3].reduce((a,i) => a + (hourWords[(h+i)%24] || 0), 0);
+    if (s > peakSum) { peakSum = s; peakStart = h; }
+  }
+  const peakEnd = (peakStart + 4) % 24;
+  const peakHours = `${String(peakStart).padStart(2,'0')}:00 – ${String(peakStart+4).padStart(2,'0')}:00`;
+  const peakPct   = totalWords ? Math.round(peakSum / totalWords * 100) : 0;
+
+  DATA = { weeks, top5, top5ranked, activeDates, delByDate, goal,
+           totalWords, activeDays, goalDays, bestDate, bestWords, avgWords,
+           peakHours, peakPct, firstDate, today };
+
+  // Slider: rightmost position = 0 (current), leftmost = max offset
+  const maxOffset = Math.max(0, weeks.length - WINDOW_WEEKS);
+  sliderOffset = 0;
+  currentWeekIdx = weeks.length - 1 - FUTURE_PAD; // current week index
+
+  initUI();
+}
+
+// ── Init UI ──────────────────────────────────────────────────────────────────
+function initUI() {
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  renderStats();
+  renderInsights();
+  initSlider();
+  initWeekSlider();
+  renderHeatmap();
+  renderWeek(currentWeekIdx);
+  setTimeout(() => document.querySelectorAll('.stat').forEach(s => s.classList.add('animate')), 200);
+}
+
+function renderStats() {
+  const { totalWords, activeDays, goalDays, bestWords, bestDate, goal, peakHours, peakPct } = DATA;
+  const fmt = n => n.toLocaleString();
+  const bestFmt = bestDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat"><div class="stat-label">Total Words</div><div class="stat-value">${fmt(totalWords)}</div><div class="stat-sub">words written</div></div>
+    <div class="stat"><div class="stat-label">Active Days</div><div class="stat-value">${activeDays}</div><div class="stat-sub">days with writing</div></div>
+    <div class="stat"><div class="stat-label">Goal Days</div><div class="stat-value">${goalDays}</div><div class="stat-sub">${goal}+ words/day</div></div>
+    <div class="stat"><div class="stat-label">Best Day</div><div class="stat-value">${fmt(bestWords)}</div><div class="stat-sub">${bestFmt}</div></div>
+    <div class="stat"><div class="stat-label">Peak Hours</div><div class="stat-value" style="font-size:16px">${peakHours}</div><div class="stat-sub">${peakPct}% of all words</div></div>
+  `;
+  document.getElementById('legend-goal').textContent = goal;
+}
+
+function renderInsights() {
+  const { activeDates, weeks, avgWords } = DATA;
+
+  // Peak month
+  const monthTotals = {};
+  for (const [ds, w] of Object.entries(activeDates)) {
+    const d = new Date(ds + 'T12:00:00');
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    monthTotals[key] = (monthTotals[key]||0) + w;
+  }
+  const peakKey = Object.entries(monthTotals).sort((a,b)=>b[1]-a[1])[0][0];
+  const [py, pm] = peakKey.split('-');
+  const peakMonthStr = `${MONTH_NAMES[+pm]} ${py}`;
+
+  document.getElementById('insights').innerHTML = `
+    <div class="insight"><div class="insight-icon">✦</div><div><div class="insight-title">Peak Month</div><div class="insight-val">${peakMonthStr}</div></div></div>
+    <div class="insight"><div class="insight-icon">◈</div><div><div class="insight-title">Avg on Active Days</div><div class="insight-val">~${avgWords.toLocaleString()} words</div></div></div>
+  `;
+}
+
+// ── Slider ───────────────────────────────────────────────────────────────────
+function initSlider() {
+  const { weeks, firstDate } = DATA;
+  const maxOffset = Math.max(0, weeks.length - WINDOW_WEEKS);
+  const slider = document.getElementById('heatmap-slider');
+  slider.max = maxOffset;
+  slider.value = maxOffset; // start at rightmost (current)
+  sliderOffset = 0;
+
+  const firstLabel = `${MONTH_NAMES[firstDate.getMonth()]} ${firstDate.getFullYear()}`;
+  document.getElementById('slider-left').textContent = firstLabel;
+
+  slider.addEventListener('input', () => {
+    sliderOffset = maxOffset - parseInt(slider.value);
+    renderHeatmap();
+  });
+}
+
+// ── Heatmap ──────────────────────────────────────────────────────────────────
+function wordLevel(w) {
+  if (!w || w <= 0) return 0;
+  if (w < 100)  return 1;
+  if (w < 300)  return 2;
+  if (w < 600)  return 3;
+  if (w < 1200) return 4;
+  return 5;
+}
+
+function renderHeatmap() {
+  const { weeks, top5, top5ranked, activeDates, delByDate, goal, today } = DATA;
+  const todayStr = localDateStr(today);
+
+  const totalWeeks = weeks.length;
+  const endIdx   = totalWeeks - 1 - sliderOffset;
+  const startIdx = endIdx - WINDOW_WEEKS + 1; // may be negative = padding needed
+  const padLeft  = Math.max(0, -startIdx);    // empty columns to prepend
+  const dataStart = Math.max(0, startIdx);
+  const visibleWeeks = weeks.slice(dataStart, endIdx + 1);
+  // Always exactly WINDOW_WEEKS columns
+  const numCols = WINDOW_WEEKS;
+
+  // Range label (skip padding weeks)
+  const firstReal = visibleWeeks[0]?.mon;
+  const lastReal  = visibleWeeks[visibleWeeks.length-1]?.days[6]?.date;
+  document.getElementById('heatmap-range').textContent = firstReal && lastReal
+    ? `${MONTH_NAMES[firstReal.getMonth()]} ${firstReal.getFullYear()} – ${MONTH_NAMES[lastReal.getMonth()]} ${lastReal.getFullYear()}`
+    : '';
+
+  const LABEL_W = 32;
+
+  // Month labels
+  const mlEl = document.getElementById('month-labels');
+  mlEl.style.gridTemplateColumns = `${LABEL_W}px repeat(${numCols},1fr)`;
+  mlEl.innerHTML = '';
+  mlEl.appendChild(document.createElement('div')); // day-label spacer
+  // pad columns
+  for (let i = 0; i < padLeft; i++) mlEl.appendChild(document.createElement('div'));
+  let lastMonthKey = '';
+  for (const w of visibleWeeks) {
+    const key = `${w.mon.getFullYear()}-${w.mon.getMonth()}`;
+    const el = document.createElement('div');
+    el.className = 'month-label';
+    if (key !== lastMonthKey) { el.textContent = MONTH_NAMES[w.mon.getMonth()]; lastMonthKey = key; }
+    mlEl.appendChild(el);
+  }
+
+  // Grid rows
+  const gridEl = document.getElementById('grid-rows');
+  gridEl.innerHTML = '';
+  const cellTip = document.getElementById('cell-tooltip');
+
+  for (let d = 0; d < 7; d++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'day-row';
+    rowEl.style.gridTemplateColumns = `${LABEL_W}px repeat(${numCols},1fr)`;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'day-label';
+    lbl.textContent = [0,2,4].includes(d) ? DAY_NAMES[d] : '';
+    rowEl.appendChild(lbl);
+
+    // Padding cells
+    for (let i = 0; i < padLeft; i++) {
+      const pad = document.createElement('div');
+      pad.className = 'cell future';
+      pad.dataset.level = 0;
+      rowEl.appendChild(pad);
+    }
+
+    // Data cells
+    for (const week of visibleWeeks) {
+      const day  = week.days[d];
+      const ds   = day.ds;
+      const isFuture = ds > todayStr;
+      const words   = isFuture ? 0 : (activeDates[ds] || 0);
+      const deleted = isFuture ? 0 : (delByDate[ds]   || 0);
+      const level   = isFuture ? 0 : wordLevel(words);
+
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (isFuture ? ' future' : '');
+      cell.dataset.level = level;
+      if (!isFuture && top5.has(ds)) cell.dataset.top5 = '1';
+      if (top5Active && !isFuture && top5.has(ds)) cell.classList.add('top5');
+
+      if (!isFuture) {
+        cell.addEventListener('mousemove', e => {
+          cellTip.classList.add('show');
+          const dateFmt = day.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+          let dateLabel = dateFmt;
+          if (top5.has(ds)) dateLabel += ` · #${top5ranked.indexOf(ds)+1} best day`;
+          document.getElementById('tip-date').textContent = dateLabel;
+          if (!words) {
+            document.getElementById('tip-words').textContent = 'No writing recorded';
+            document.getElementById('tip-deleted').textContent = deleted ? `−${deleted.toLocaleString()} deleted` : '';
+            document.getElementById('tip-goal').textContent = '';
+          } else {
+            document.getElementById('tip-words').textContent = `+${words.toLocaleString()} net words`;
+            document.getElementById('tip-deleted').textContent = deleted
+              ? `−${deleted.toLocaleString()} deleted · ${(words+deleted).toLocaleString()} gross` : '';
+            const goalEl = document.getElementById('tip-goal');
+            if (words >= goal) { goalEl.textContent = '✓ Daily goal met'; goalEl.className = 'tip-goal goal-met'; }
+            else { goalEl.textContent = `${(goal-words).toLocaleString()} words short of goal`; goalEl.className = 'tip-goal goal-miss'; }
+          }
+          cellTip.style.left = (e.clientX+14)+'px';
+          cellTip.style.top  = (e.clientY-55)+'px';
+        });
+        cell.addEventListener('mouseleave', () => cellTip.classList.remove('show'));
+      }
+      rowEl.appendChild(cell);
+    }
+    gridEl.appendChild(rowEl);
+  }
+}
+
+function toggleTop5() {
+  top5Active = !top5Active;
+  document.getElementById('top5-btn').classList.toggle('active', top5Active);
+  document.querySelectorAll('.cell[data-top5]').forEach(c => c.classList.toggle('top5', top5Active));
+}
+
+// ── Weekly panel ─────────────────────────────────────────────────────────────
+function renderWeek(idx) {
+  const { weeks, goal } = DATA;
+  const week = weeks[idx];
+  const isCurrent = idx === weeks.length - 1 - FUTURE_PAD;
+
+  document.getElementById('week-title').textContent = isCurrent ? 'This Week' : 'Week of';
+  document.getElementById('week-range').textContent = week.label;
+
+  const barsEl  = document.getElementById('week-bars');
+  const filesEl = document.getElementById('week-files');
+  barsEl.innerHTML = ''; filesEl.innerHTML = '';
+
+  // Only show Mon–Sun up to today (or full week for past)
+  const todayStr = localDateStr(DATA.today);
+  const days = week.days.filter(d => d.ds <= todayStr);
+
+  const weekMax  = Math.max(...days.map(d => d.net), goal * 1.2);
+  const weekTotal = days.reduce((s,d) => s + d.net, 0);
+
+  // Bars
+  const titleB = document.createElement('div');
+  titleB.className = 'bars-title';
+  titleB.textContent = 'Words Written';
+  barsEl.appendChild(titleB);
+
+  days.forEach(day => {
+    const row = document.createElement('div'); row.className = 'bar-row';
+    const lbl = document.createElement('div'); lbl.className = 'bar-day'; lbl.textContent = day.date.toLocaleDateString('en-US',{weekday:'short'}).slice(0,3); row.appendChild(lbl);
+    const track = document.createElement('div'); track.className = 'bar-track';
+    const fill  = document.createElement('div'); fill.className = 'bar-fill' + (day.net >= goal ? ' goal-day' : ''); fill.style.width = '0%'; track.appendChild(fill);
+    const gl = document.createElement('div'); gl.className = 'bar-goal-line'; gl.style.left = `${(goal/weekMax)*100}%`; track.appendChild(gl);
+    row.appendChild(track);
+    const val = document.createElement('div'); val.className = 'bar-val' + (day.net >= goal ? ' goal-day' : ''); val.textContent = day.net > 0 ? day.net.toLocaleString() : '—'; row.appendChild(val);
+    barsEl.appendChild(row);
+    setTimeout(() => { fill.style.width = `${(day.net/weekMax)*100}%`; }, 60);
+  });
+
+  const totRow = document.createElement('div'); totRow.className = 'week-total-row';
+  totRow.innerHTML = `<span>Week total</span><span class="week-total-val">${weekTotal.toLocaleString()} <span style="font-size:11px;color:var(--text-dim);font-family:'DM Mono',monospace">words</span></span>`;
+  barsEl.appendChild(totRow);
+
+  // Files
+  const titleF = document.createElement('div'); titleF.className = 'files-title'; titleF.textContent = 'Files Touched'; filesEl.appendChild(titleF);
+  const fileTip = document.getElementById('file-tooltip');
+  let anyFiles = false;
+
+  days.forEach(day => {
+    const fnames = Object.keys(day.files);
+    if (!fnames.length) return;
+    anyFiles = true;
+    const group = document.createElement('div'); group.className = 'file-day-group';
+    const lbl = document.createElement('div'); lbl.className = 'file-day-label';
+    lbl.textContent = `${day.date.toLocaleDateString('en-US',{weekday:'short'}).slice(0,3)} · ${fnames.length} file${fnames.length>1?'s':''}`;
+    group.appendChild(lbl);
+    const chipRow = document.createElement('div'); chipRow.className = 'file-chip-row';
+    fnames.forEach(fname => {
+      const stats = day.files[fname];
+      const chip = document.createElement('div'); chip.className = 'file-chip'; chip.textContent = fname;
+      chip.addEventListener('mousemove', e => {
+        fileTip.classList.add('show');
+        document.getElementById('ftip-name').textContent = fname;
+        document.getElementById('ftip-net').textContent = stats.net > 0 ? `+${stats.net.toLocaleString()} net` : stats.net < 0 ? `${stats.net.toLocaleString()} net` : 'no net change';
+        const parts = [];
+        if (stats.added)   parts.push(`+${stats.added.toLocaleString()} added`);
+        if (stats.deleted) parts.push(`−${stats.deleted.toLocaleString()} deleted`);
+        document.getElementById('ftip-detail').textContent = parts.join('  ·  ');
+        fileTip.style.left = (e.clientX+14)+'px'; fileTip.style.top = (e.clientY-55)+'px';
+      });
+      chip.addEventListener('mouseleave', () => fileTip.classList.remove('show'));
+      chipRow.appendChild(chip);
+    });
+    group.appendChild(chipRow); filesEl.appendChild(group);
+  });
+
+  if (!anyFiles) { const el = document.createElement('div'); el.className = 'no-files'; el.textContent = 'No files touched this week.'; filesEl.appendChild(el); }
+}
+
+function initWeekSlider() {
+  const { weeks, firstDate } = DATA;
+  const maxIdx = weeks.length - 1 - FUTURE_PAD;
+  const slider = document.getElementById('week-slider');
+  slider.min = 0;
+  slider.max = maxIdx;
+  slider.value = maxIdx; // start at current week
+  currentWeekIdx = maxIdx;
+
+  const firstLabel = `${MONTH_NAMES[firstDate.getMonth()]} ${firstDate.getFullYear()}`;
+  document.getElementById('week-slider-left').textContent = firstLabel;
+
+  slider.addEventListener('input', () => {
+    currentWeekIdx = parseInt(slider.value);
+    renderWeek(currentWeekIdx);
+  });
+}
+
+function changeWeek(idx) {
+  currentWeekIdx = idx;
+  document.getElementById('week-slider').value = idx;
+  renderWeek(currentWeekIdx);
+}
+</script>
+</body>
+</html>
